@@ -1,0 +1,6 @@
+cache_capacity: 100
+cache_duration_minutes: 100
+
+max_retries: 6
+dial_timeout: 10
+timeout: 5
