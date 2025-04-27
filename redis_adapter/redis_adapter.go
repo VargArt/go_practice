@@ -16,18 +16,37 @@ type Config struct {
 	MaxRetries  int           `yaml:"max_retries"`
 	DialTimeout time.Duration `yaml:"dial_timeout"`
 	Timeout     time.Duration `yaml:"timeout"`
+	Ttl         time.Duration `yaml:"ttl"`
 }
 
-func NewClient(ctx context.Context, cfg Config) (*redis.Client, error) {
+var Cfg = Config{
+	Addr:        "localhost:6379",
+	Password:    "",
+	User:        "",
+	DB:          0,
+	MaxRetries:  5,
+	DialTimeout: 10 * time.Second,
+	Timeout:     5 * time.Second,
+	Ttl:         30 * time.Second,
+}
+
+type LRUCache struct {
+	client *redis.Client
+	ttl    time.Duration
+}
+
+var WeatherCache *LRUCache = nil
+
+func NewLRUCache(ctx context.Context) (*LRUCache, error) {
 	db := redis.NewClient(&redis.Options{
-		Addr:         cfg.Addr,
-		Password:     cfg.Password,
-		DB:           cfg.DB,
-		Username:     cfg.User,
-		MaxRetries:   cfg.MaxRetries,
-		DialTimeout:  cfg.DialTimeout,
-		ReadTimeout:  cfg.Timeout,
-		WriteTimeout: cfg.Timeout,
+		Addr:         Cfg.Addr,
+		Password:     Cfg.Password,
+		DB:           Cfg.DB,
+		Username:     Cfg.User,
+		MaxRetries:   Cfg.MaxRetries,
+		DialTimeout:  Cfg.DialTimeout,
+		ReadTimeout:  Cfg.Timeout,
+		WriteTimeout: Cfg.Timeout,
 	})
 
 	if err := db.Ping(ctx).Err(); err != nil {
@@ -35,5 +54,15 @@ func NewClient(ctx context.Context, cfg Config) (*redis.Client, error) {
 		return nil, err
 	}
 
-	return db, nil
+	return &LRUCache{client: db, ttl: Cfg.Ttl}, nil
+}
+
+func (c *LRUCache) Set(ctx context.Context, key string, value []byte) error {
+	return c.client.Set(ctx, key, value, c.ttl).Err()
+}
+
+func (c *LRUCache) Get(ctx context.Context, key string) (string, error) {
+	val, err := c.client.Get(ctx, key).Result()
+
+	return val, err
 }

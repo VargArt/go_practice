@@ -8,8 +8,7 @@ import (
 )
 
 type Conf struct {
-	CacheCapacity int64 `yaml:"cache_capacity"`
-	CacheDuration int64 `yaml:"cache_duration_minutes"`
+	CacheDuration int64 `yaml:"cache_duration_seconds"`
 	MaxRetries    int64 `yaml:"max_retries"`
 	DialTimeout   int64 `yaml:"dial_timeout"`
 	Timeout       int64 `yaml:"timeout"`
