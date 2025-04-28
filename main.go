@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,21 +12,35 @@ import (
 	"weather_checker/conf_reader"
 	"weather_checker/handlers"
 	"weather_checker/redis_adapter"
-
-	"github.com/alexflint/go-arg"
 )
+
+type configFlag struct {
+	ConfigPath string
+}
+
+func (f *configFlag) Set(s string) error {
+	if s == "" {
+		return fmt.Errorf("empty config path")
+	}
+	f.ConfigPath = s
+
+	return nil
+}
+
+func (f *configFlag) String() string {
+	return "path to config"
+}
 
 func main() {
 	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
 	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 
-	var args struct {
-		ConfPath string `arg:"--config"`
-	}
-	arg.MustParse(&args)
+	conf_path := configFlag{""}
+	flag.CommandLine.Var(&conf_path, "config", "Configuration file")
+	flag.Parse()
 
 	var config conf_reader.Conf
-	config.GetConf(args.ConfPath)
+	config.GetConf(conf_path.ConfigPath)
 
 	redis_adapter.Cfg.DialTimeout = time.Duration(config.DialTimeout) * time.Second
 	redis_adapter.Cfg.Timeout = time.Duration(config.Timeout) * time.Second
